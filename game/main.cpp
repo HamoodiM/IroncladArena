@@ -245,6 +245,7 @@ int main(int argc, char** argv) {
         }
 
         // ---- Screen logic.
+        const Screen screenBefore = screen;
         switch (screen) {
             case Screen::Title:
                 if (IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) ||
@@ -264,11 +265,13 @@ int main(int argc, char** argv) {
                 break;
         }
 
+        const bool startedThisFrame = screenBefore != Screen::Playing && screen == Screen::Playing;
+
         // ---- Simulation.
         const Camera2D aimCam = renderer.WorldCamera(sw, sh, false);
         stats.ticksThisFrame = 0;
         if (screen == Screen::Playing || screen == Screen::GameOver) {
-            CollectPresses(pending);
+            if (!startedThisFrame) CollectPresses(pending);  // the click that started the run isn't an attack
             const int steps = timestep.Advance(frameDt);
             for (int s = 0; s < steps; ++s) {
                 const PlayerInput in = botPlays ? bot.Think(*world) : ReadHumanInput(*world, aimCam, pending, usingStickAim);
