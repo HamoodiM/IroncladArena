@@ -39,13 +39,29 @@ TEST_CASE("World::Step makes no heap allocations, across many waves") {
 
     long long allocs = 0;
     for (int tick = 0; tick < 60 * 180; ++tick) {
+        // A simple fighter: walk at the nearest enemy, swing when close, shoot when not.
+        // It has to clear waves, or the test never covers wave transitions and spawning.
         PlayerInput in;
-        const float t = static_cast<float>(tick) * World::kStep;
-        in.move = FromAngle(t * 0.7f);
-        in.aim = world->Player().pos + FromAngle(t * 3.1f) * 100.0f;
-        in.meleePressed = tick % 9 == 0;
-        in.dashPressed = tick % 80 == 0;
-        in.shootHeld = (tick / 90) % 2 == 0;
+        const Vec2 me = world->Player().pos;
+        const Enemy* target = nullptr;
+        float best = 1e9f;
+        world->Enemies().ForEach([&](std::uint32_t, const Enemy& e) {
+            if (e.state == EnemyState::Spawning) return;
+            const float d = Distance(e.pos, me);
+            if (d < best) {
+                best = d;
+                target = &e;
+            }
+        });
+        if (target) {
+            in.aim = target->pos;
+            in.move = best > 45.0f ? Normalize(target->pos - me) : Perp(Normalize(target->pos - me));
+            in.meleePressed = best < 90.0f && tick % 6 == 0;
+            in.shootHeld = best >= 90.0f;
+        } else {
+            in.aim = me + Vec2{100.0f, 0.0f};
+        }
+        in.dashPressed = tick % 120 == 0;
 
         const long long before = g_news.load();
         world->Step(in);
