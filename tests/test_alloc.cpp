@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <memory>
 #include <new>
 
 #include "TestData.h"
